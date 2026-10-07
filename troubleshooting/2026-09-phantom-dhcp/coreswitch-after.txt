@@ -1,0 +1,18 @@
+CoreSwitch(config)# interface vlan 10
+CoreSwitch(config-if)# ip helper-address 10.0.100.2
+CoreSwitch(config-if)# exit
+
+CoreSwitch(config)# interface vlan 20
+CoreSwitch(config-if)# ip helper-address 10.0.100.2
+CoreSwitch(config-if)# exit
+
+CoreSwitch(config)# interface vlan 30
+CoreSwitch(config-if)# ip helper-address 10.0.100.2
+CoreSwitch(config-if)# exit
+
+CoreSwitch(config)# interface vlan 40
+CoreSwitch(config-if)# ip helper-address 10.0.100.2
+CoreSwitch(config-if)# exit
+
+CoreSwitch(config)# end
+CoreSwitch# write memory
