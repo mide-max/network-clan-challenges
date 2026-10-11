@@ -1,0 +1,76 @@
+! TP-SW1 - Managed switch (Cisco 2960-24TT, Packet Tracer)
+hostname TP-SW1
+no ip domain-lookup
+enable secret <redacted>
+
+vlan 10
+ name EMPLOYEES
+vlan 20
+ name GUEST
+vlan 30
+ name CAMERAS
+vlan 40
+ name MGMT
+vlan 50
+ name SERVERS
+vlan 60
+ name PRINTERS
+vlan 99
+ name UNUSED-NATIVE
+
+interface FastEthernet0/1
+ description TRUNK-TO-TPFW1
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,99
+interface FastEthernet0/2
+ description AP-STAFF
+ switchport mode access
+ switchport access vlan 10
+interface FastEthernet0/3
+ description AP-GUEST
+ switchport mode access
+ switchport access vlan 20
+interface range FastEthernet0/4 - 11
+ description EMPLOYEE-PCS
+ switchport mode access
+ switchport access vlan 10
+ spanning-tree portfast
+interface range FastEthernet0/12 - 13
+ description PRINTERS
+ switchport mode access
+ switchport access vlan 60
+interface FastEthernet0/14
+ description NAS
+ switchport mode access
+ switchport access vlan 50
+interface range FastEthernet0/15 - 18
+ description CAMERAS
+ switchport mode access
+ switchport access vlan 30
+interface FastEthernet0/19
+ description ADMIN-PC
+ switchport mode access
+ switchport access vlan 40
+interface range FastEthernet0/20 - 23 , GigabitEthernet0/1 - 2
+ description UNUSED
+ switchport mode access
+ switchport access vlan 99
+ shutdown
+interface FastEthernet0/24
+ description TRUNK-TO-TPSW2
+ switchport mode trunk
+ switchport trunk native vlan 99
+ switchport trunk allowed vlan 10,20,30,40,50,60,99
+
+interface Vlan40
+ ip address 10.10.40.2 255.255.255.224
+ no shutdown
+ip default-gateway 10.10.40.1
+
+ip domain-name techpoint.local
+username admin secret <redacted>
+ip ssh version 2
+line vty 0 15
+ login local
+ transport input ssh
