@@ -1,0 +1,129 @@
+! TP-FW1 - Router/firewall (Cisco 2911, Packet Tracer)
+hostname TP-FW1
+no ip domain-lookup
+enable secret <redacted>
+
+interface GigabitEthernet0/0
+ description TRUNK-TO-TPSW1
+ no shutdown
+interface GigabitEthernet0/0.99
+ description NATIVE-UNUSED
+ encapsulation dot1Q 99 native
+interface GigabitEthernet0/0.10
+ description EMPLOYEES
+ encapsulation dot1Q 10
+ ip address 10.10.10.1 255.255.255.0
+ ip access-group EMP-IN in
+ ip nat inside
+interface GigabitEthernet0/0.20
+ description GUEST
+ encapsulation dot1Q 20
+ ip address 10.10.20.1 255.255.255.0
+ ip access-group GUEST-IN in
+ ip nat inside
+interface GigabitEthernet0/0.30
+ description CAMERAS
+ encapsulation dot1Q 30
+ ip address 10.10.30.1 255.255.255.192
+ ip access-group CAM-IN in
+ ip nat inside
+interface GigabitEthernet0/0.40
+ description MANAGEMENT
+ encapsulation dot1Q 40
+ ip address 10.10.40.1 255.255.255.224
+ ip access-group MGMT-IN in
+ ip nat inside
+interface GigabitEthernet0/0.50
+ description SERVERS
+ encapsulation dot1Q 50
+ ip address 10.10.50.1 255.255.255.224
+ ip access-group SERVERS-IN in
+ ip nat inside
+interface GigabitEthernet0/0.60
+ description PRINTERS
+ encapsulation dot1Q 60
+ ip address 10.10.60.1 255.255.255.224
+ ip access-group PRN-IN in
+ ip nat inside
+interface GigabitEthernet0/1
+ description WAN1-PRIMARY
+ ip address 203.0.113.2 255.255.255.252
+ ip nat outside
+ no shutdown
+interface GigabitEthernet0/2
+ description WAN2-BACKUP
+ ip address 198.51.100.2 255.255.255.252
+ ip nat outside
+ no shutdown
+
+ip dhcp excluded-address 10.10.10.1 10.10.10.49
+ip dhcp excluded-address 10.10.10.251 10.10.10.254
+ip dhcp excluded-address 10.10.20.1 10.10.20.9
+ip dhcp excluded-address 10.10.20.251 10.10.20.254
+ip dhcp pool EMPLOYEES
+ network 10.10.10.0 255.255.255.0
+ default-router 10.10.10.1
+ dns-server 8.8.8.8
+ip dhcp pool GUEST
+ network 10.10.20.0 255.255.255.0
+ default-router 10.10.20.1
+ dns-server 8.8.8.8
+
+! Default routes: primary + floating backup
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+ip route 0.0.0.0 0.0.0.0 198.51.100.1 250
+
+! NAT/PAT (Packet Tracer does not support route-map NAT)
+access-list 1 permit 10.10.10.0 0.0.0.255
+access-list 1 permit 10.10.20.0 0.0.0.255
+ip nat inside source list 1 interface GigabitEthernet0/1 overload
+ip nat inside source list 1 interface GigabitEthernet0/2 overload
+
+ip access-list extended EMP-IN
+ permit udp any any eq 67
+ permit icmp 10.10.10.0 0.0.0.255 host 10.10.10.1 echo
+ permit tcp 10.10.10.0 0.0.0.255 host 10.10.50.10 eq 445
+ permit tcp 10.10.10.0 0.0.0.255 host 10.10.50.10 eq www
+ permit icmp 10.10.10.0 0.0.0.255 host 10.10.50.10 echo
+ permit tcp 10.10.10.0 0.0.0.255 10.10.60.0 0.0.0.31 eq 9100
+ permit tcp 10.10.10.0 0.0.0.255 10.10.60.0 0.0.0.31 eq 631
+ permit icmp 10.10.10.0 0.0.0.255 10.10.60.0 0.0.0.31 echo
+ deny ip 10.10.10.0 0.0.0.255 10.0.0.0 0.255.255.255
+ permit ip 10.10.10.0 0.0.0.255 any
+ip access-list extended GUEST-IN
+ permit udp any any eq 67
+ deny ip 10.10.20.0 0.0.0.255 10.0.0.0 0.255.255.255
+ permit udp 10.10.20.0 0.0.0.255 any eq domain
+ permit tcp 10.10.20.0 0.0.0.255 any eq 80
+ permit tcp 10.10.20.0 0.0.0.255 any eq 443
+ permit icmp 10.10.20.0 0.0.0.255 any echo
+ deny ip any any
+ip access-list extended CAM-IN
+ permit tcp 10.10.30.0 0.0.0.63 10.10.50.0 0.0.0.31 established
+ permit icmp 10.10.30.0 0.0.0.63 10.10.50.0 0.0.0.31 echo-reply
+ deny ip any any
+ip access-list extended SERVERS-IN
+ permit tcp host 10.10.50.10 10.10.10.0 0.0.0.255 established
+ permit icmp host 10.10.50.10 10.10.10.0 0.0.0.255 echo-reply
+ permit tcp host 10.10.50.10 10.10.30.0 0.0.0.63 eq 554
+ permit tcp host 10.10.50.10 10.10.30.0 0.0.0.63 eq 80
+ permit tcp host 10.10.50.10 10.10.30.0 0.0.0.63 eq 443
+ permit icmp host 10.10.50.10 10.10.30.0 0.0.0.63 echo
+ deny ip any any
+ip access-list extended PRN-IN
+ permit tcp 10.10.60.0 0.0.0.31 10.10.10.0 0.0.0.255 established
+ permit icmp 10.10.60.0 0.0.0.31 10.10.10.0 0.0.0.255 echo-reply
+ deny ip any any
+ip access-list extended MGMT-IN
+ permit ip 10.10.40.0 0.0.0.31 any
+ deny ip any any
+
+ip domain-name techpoint.local
+username admin secret <redacted>
+ip ssh version 2
+ip access-list standard MGMT-VTY
+ permit 10.10.40.0 0.0.0.31
+line vty 0 4
+ login local
+ transport input ssh
+ access-class MGMT-VTY in
